@@ -1,7 +1,0 @@
-# SPDX-License-Identifier: MIT
----
-# Values are set if ansible_os_family is Redhat (includes CentOS stream 8)
-__mssql_server_repository: >-
-  https://packages.microsoft.com/rhel/8/mssql-server-{{ mssql_version | int }}/
-__mssql_client_repository: >-
-  https://packages.microsoft.com/rhel/8/prod/
