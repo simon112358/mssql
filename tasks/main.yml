@@ -952,6 +952,8 @@
             name: "{{ __mssql_server_ha_packages }}"
             state: "{{ 'present' if mssql_ha_configure | bool else 'absent' }}"
           register: __mssql_server_ha_packages_install
+          # mssql_ha_cluster_type is "external" needs Pacemaker etc
+          when: mssql_ha_ag_cluster_type | lower == "external"
 
         - name: Enable the hadrenabled setting
           include_tasks: mssql_conf_setting.yml
@@ -1093,6 +1095,8 @@
             name: "{{ __mssql_server_ha_packages }}"
             state: "{{ 'present' if mssql_ha_configure | bool else 'absent' }}"
           register: __mssql_server_ha_packages_install
+          # mssql_ha_cluster_type is "external" needs Pacemaker etc
+          when: mssql_ha_ag_cluster_type | lower == "external"
 
         - name: Enable the hadrenabled setting
           include_tasks: mssql_conf_setting.yml
