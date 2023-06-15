@@ -9,12 +9,19 @@
       intersect(__mssql_required_facts) == __mssql_required_facts
 
 - name: Set platform/version specific variables
+
+  # Load variables from YAML files that are specific to the platform and version of the operating system
   include_vars: "{{ __mssql_vars_file }}"
+
+  # Iterate over a list of YAML files that should be loaded
   loop:
     - "{{ ansible_os_family }}.yml"
     - "{{ ansible_distribution }}.yml"
     - "{{ ansible_distribution }}_{{ ansible_distribution_major_version }}.yml"
     - "{{ ansible_distribution }}_{{ ansible_distribution_version }}.yml"
+
+  # Set the value of the __mssql_vars_file variable
   vars:
     __mssql_vars_file: "{{ role_path }}/vars/{{ item }}"
-  when: __mssql_vars_file is file
+
+  # Only execute the task if the __mssql_vars_file variable is a file

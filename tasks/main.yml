@@ -275,58 +275,9 @@
     __mssql_storage_mode: "{{ item.mode }}"
     __mssql_storage_setting: "{{ item.setting }}"
 
-- name: Ensure that the tuned-profiles-mssql package is installed
-  package:
-    name: tuned-profiles-mssql
-    state: present
-
-- name: Ensure that the tuned service is started and enabled
-  service:
-    name: tuned
-    state: started
-    enabled: true
-
-- name: Get the active Tuned profiles
-  command: tuned-adm active
-  changed_when: false
-  register: __mssql_tuned_active_profiles
-
-# adding the mssql profile to the end of the list ensures
-# that it overrides conflicting settings in other profiles
-- name: Add mssql to the list of Tuned profiles
-  when: '"mssql" not in __mssql_tuned_active_profiles.stdout'
-  block:
-    - name: Attempt to add mssql to the list of Tuned profiles
-      command: >-
-        tuned-adm profile {{ __mssql_tuned_active_profiles.stdout
-        | regex_replace('^Current active profile: ', '') }} mssql
-      register: __mssql_tuned_adm_profile
-      changed_when: __mssql_tuned_adm_profile.stderr | length == 0
-      failed_when: false
-
-    # It is needed because there is a bug in tuned that causes issues when
-    # adding multiple profiles with common ancestors. Fail happens for example,
-    # when running `tuned-adm profile virtual-guest mssql` because both profiles
-    # include `throughput-performance`
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1825882
-    - name: Remove troublemaking include from the mssql profile
-      lineinfile:
-        path: /usr/lib/tuned/mssql/tuned.conf
-        regexp: include=throughput-performance
-        state: absent
-      when: >-
-        "Cannot find profile 'throughput-performance'" in
-        __mssql_tuned_adm_profile.stderr
-
-    - name: Add the fixed mssql profile to the list of Tuned profiles
-      command: >-
-        tuned-adm profile {{ __mssql_tuned_active_profiles.stdout |
-        regex_replace('^Current active profile: ', '') }} mssql
-      when: >-
-        "Cannot find profile 'throughput-performance'" in
-        __mssql_tuned_adm_profile.stderr
-      register: __mssql_tuned_adm_profile
-      changed_when: __mssql_tuned_adm_profile.stderr | length == 0
+- name: Ensure RHEL tuned
+  include_tasks: rhel_tuned.yml
+  when: mssql_rhel_tuned
 
 - name: Configure the Microsoft SQL Server Tools repository
   yum_repository:
@@ -952,8 +903,8 @@
             name: "{{ __mssql_server_ha_packages }}"
             state: "{{ 'present' if mssql_ha_configure | bool else 'absent' }}"
           register: __mssql_server_ha_packages_install
-          # mssql_ha_cluster_type is "external" needs Pacemaker etc
-          when: mssql_ha_ag_cluster_type | lower == "external"
+          # msql-server-ha only needed when mssql_ha_ag_cluster_type is external i.e. pacemaker etc.
+          when: mssql_ha_ag_cluster_type | lower == 'external'
 
         - name: Enable the hadrenabled setting
           include_tasks: mssql_conf_setting.yml
@@ -1095,8 +1046,8 @@
             name: "{{ __mssql_server_ha_packages }}"
             state: "{{ 'present' if mssql_ha_configure | bool else 'absent' }}"
           register: __mssql_server_ha_packages_install
-          # mssql_ha_cluster_type is "external" needs Pacemaker etc
-          when: mssql_ha_ag_cluster_type | lower == "external"
+          # msql-server-ha only needed when mssql_ha_ag_cluster_type is external e.g. pacemaker
+          when: mssql_ha_ag_cluster_type | lower == 'external'
 
         - name: Enable the hadrenabled setting
           include_tasks: mssql_conf_setting.yml
