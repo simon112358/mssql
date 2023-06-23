@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Ensure ansible_facts used by role
+  setup:
+    gather_subset: min
+  when:
+    - __mssql_required_facts is defined
+    - not ansible_facts.keys() | list |
+      intersect(__mssql_required_facts) == __mssql_required_facts
+
+- name: Set platform/version specific variables
+  
+  # Load variables from YAML files that are specific to the platform and version of the operating system
+  include_vars: "{{ __mssql_vars_file }}"
+
+- namw: output __mssql_vars_file
+  debug:
+    var: __mssql_vars_file
+

@@ -1,0 +1,6 @@
+---
+# Values are set if ansible_os_family is Ubuntu
+__mssql_server_repository: >-
+  https://packages.microsoft.com/ubuntu/20.04/mssql-server-{{ mssql_version | int }}
+__mssql_client_repository: >-
+  https://packages.microsoft.com/ubuntu/20.04/prod/

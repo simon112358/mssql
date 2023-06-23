@@ -132,10 +132,20 @@
       | first | int > item.value
   with_dict: "{{ __mssql_version_package_mapping }}"
 
-- name: Deploy the GPG key for Microsoft repositories
+- name: Deploy the GPG key for Microsoft repositories [RHEL]
   rpm_key:
     key: "{{ mssql_rpm_key }}"
     state: present
+  when:
+    - ansible_distribution in ['CentOS', 'RedHat']
+
+- name: Deploy the GPG key for Microsoft repositories [Ubuntu]
+  apt_key:
+    url: "{{ mssql_rpm_key }}"
+    state: present
+  when:
+    - ansible_distribution in ['Ubuntu']
+
 
 - name: Prepare for the upgrade
   when: mssql_upgrade | bool
@@ -170,15 +180,25 @@
         state: absent
       when: __mssql_curr_repo.stdout | length > 0
 
-- name: Configure the Microsoft SQL Server repo version {{ mssql_version }}
+- name: Configure the Microsoft SQL Server repo version {{ mssql_version }} [RHEL]
   yum_repository:
     name: packages-microsoft-com-mssql-server-{{ mssql_version | int }}
     description: Microsoft SQL Server {{ mssql_version }}
     baseurl: "{{ mssql_server_repository }}"
     gpgcheck: true
   when: >-
-    (__mssql_server_packages not in ansible_facts.packages) or
-    (mssql_upgrade | bool)
+    (ansible_distribution in ['CentOS', 'RedHat']) and
+    ((__mssql_server_packages not in ansible_facts.packages) or
+    (mssql_upgrade | bool))
+
+- name: Configure the Microsoft SQL Server repo version {{ mssql_version }} [ Ubuntu ]
+  apt_repository:
+    repo: "deb [arch=amd64,armhf,arm64] {{ mssql_server_repository }} focal main"
+    state: present
+  when: >-
+    (ansible_distribution in ['Ubuntu']) and
+    ((__mssql_server_packages not in ansible_facts.packages) or
+    (mssql_upgrade | bool))
 
 - name: Ensure the package {{ __mssql_server_packages }}
   package:
@@ -210,6 +230,8 @@
     fi
   changed_when: false
   register: __mssql_errorlog
+  args:
+    executable: /bin/bash
 
 - name: Gather system services facts
   service_facts:
@@ -279,12 +301,21 @@
   include_tasks: rhel_tuned.yml
   when: mssql_rhel_tuned
 
-- name: Configure the Microsoft SQL Server Tools repository
+- name: Configure the Microsoft SQL Server Tools repository [RHEL]
   yum_repository:
     name: packages-microsoft-com-prod
     description: Microsoft SQL Server Tools
     baseurl: "{{ mssql_client_repository }}"
     gpgcheck: true
+  when:
+    ansible_distribution in ['CentOS', 'RedHat']
+
+- name: Configure the Microsoft SQL Server Tools repository [Ubuntu]
+  apt_repository:
+    repo: "deb [arch=amd64,armhf,arm64] {{ mssql_client_repository }} focal main"
+    state: present
+  when: 
+    ansible_distribution in ['Ubuntu']
 
 - name: Ensure that SQL Server client tools are installed
   package:
